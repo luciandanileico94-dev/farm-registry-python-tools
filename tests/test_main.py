@@ -1,3 +1,5 @@
+import json
+
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -88,13 +90,16 @@ def test_rejects_coordinates_outside_lon_lat_ranges() -> None:
 
 
 def test_rejects_non_finite_coordinates() -> None:
+    payload = {
+        "type": "Polygon",
+        "coordinates": [[[0, 0], [1, float("inf")], [1, 1], [0, 0]]],
+    }
     response = client.post(
         "/validate/parcel",
-        json={
-            "type": "Polygon",
-            "coordinates": [[[0, 0], [1, float("inf")], [1, 1], [0, 0]]],
-        },
+        content=json.dumps(payload),
+        headers={"content-type": "application/json"},
     )
+    assert response.status_code == 200
     assert response.json()["valid"] is False
     assert response.json()["issues"] == ["invalid GeoJSON geometry"]
 
