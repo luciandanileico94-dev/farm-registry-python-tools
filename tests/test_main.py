@@ -13,6 +13,30 @@ def test_health() -> None:
     assert response.json()["status"] == "ok"
 
 
+def test_cors_allows_vite_origins() -> None:
+    response = client.get("/parcels", headers={"Origin": "http://localhost:5173"})
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://localhost:5173"
+
+
+def test_cors_rejects_unknown_origin() -> None:
+    response = client.get("/parcels", headers={"Origin": "https://not-farm-registry.example"})
+    assert response.status_code == 200
+    assert "access-control-allow-origin" not in response.headers
+
+
+def test_cors_preflight_allows_vite_origin() -> None:
+    response = client.options(
+        "/parcels",
+        headers={
+            "Origin": "http://127.0.0.1:4173",
+            "Access-Control-Request-Method": "GET",
+        },
+    )
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://127.0.0.1:4173"
+
+
 def test_validates_geojson_feature() -> None:
     payload = {
         "type": "Feature",
@@ -32,12 +56,25 @@ def test_validates_geojson_feature() -> None:
 def test_get_parcels_keeps_web_client_contract() -> None:
     response = client.get("/parcels")
     assert response.status_code == 200
-    assert {"id", "farmer", "area", "status", "crop", "center"} <= response.json()[0].keys()
-    assert all(parcel["id"].startswith("SYN-") for parcel in response.json())
-    assert all(
-        "Demo" in parcel["farmer"] or "Exemplu" in parcel["farmer"]
-        for parcel in response.json()
-    )
+    parcels = response.json()
+    expected_keys = {"id", "farmer", "area", "status", "crop", "center"}
+    assert parcels
+    for parcel in parcels:
+        assert set(parcel) == expected_keys
+        assert isinstance(parcel["id"], str)
+        assert isinstance(parcel["farmer"], str)
+        assert isinstance(parcel["area"], (int, float))
+        assert isinstance(parcel["status"], str)
+        assert parcel["status"] in {"Valid", "Review", "Blocked"}
+        assert isinstance(parcel["crop"], str)
+        assert isinstance(parcel["center"], list)
+        assert len(parcel["center"]) == 2
+        latitude, longitude = parcel["center"]
+        assert isinstance(latitude, (int, float))
+        assert isinstance(longitude, (int, float))
+        assert -90 <= latitude <= 90
+        assert -180 <= longitude <= 180
+    assert all(parcel["id"].startswith("SYN-") for parcel in parcels)
 
 
 def test_rejects_missing_geometry() -> None:
@@ -102,6 +139,37 @@ def test_rejects_non_finite_coordinates() -> None:
     assert response.status_code == 200
     assert response.json()["valid"] is False
     assert response.json()["issues"] == ["invalid GeoJSON geometry"]
+
+
+def test_rejects_three_dimensional_coordinates() -> None:
+    response = client.post(
+        "/validate/parcel",
+        json={
+            "type": "Polygon",
+            "coordinates": [[[0, 0, 10], [1, 0, 10], [1, 1, 10], [0, 0, 10]]],
+        },
+    )
+    assert response.status_code == 200
+    assert response.json() == {"valid": False, "area_m2": None, "issues": ["invalid GeoJSON geometry"]}
+
+
+def test_rejects_feature_with_missing_geometry_type() -> None:
+    response = client.post(
+        "/validate/parcel",
+        json={"type": "Feature", "geometry": {"coordinates": []}},
+    )
+    assert response.status_code == 200
+    assert response.json()["valid"] is False
+    assert response.json()["issues"] == ["geometry.type must be a string"]
+
+
+def test_rejects_invalid_coordinate_structure() -> None:
+    response = client.post(
+        "/validate/parcel",
+        json={"type": "Polygon", "coordinates": [[0, 0], [1, 1]]},
+    )
+    assert response.status_code == 200
+    assert response.json()["valid"] is False
 
 
 def test_subtracts_polygon_holes_from_geodesic_area() -> None:

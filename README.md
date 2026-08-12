@@ -26,6 +26,12 @@ uvicorn app.main:app --reload
 
 API-ul este disponibil la `http://127.0.0.1:8000`, iar documentația OpenAPI la `/docs`.
 
+Pentru clientul Vite, CORS permite implicit originile exacte `http://localhost:5173`,
+`http://127.0.0.1:5173`, `http://localhost:4173` și `http://127.0.0.1:4173`.
+În alte medii, setează `FARM_REGISTRY_CORS_ORIGINS` ca listă separată prin virgulă,
+de exemplu `https://web.example.test,https://preview.example.test`. Nu se folosesc
+wildcard-uri sau credentials.
+
 ## Capturi reale ale API-ului
 
 Capturile sunt din documentația OpenAPI generată automat pentru API-ul curent, accesibilă local la `/docs` după pornirea serverului. Nu este un backend public deployed și nu există un live URL:
@@ -52,7 +58,13 @@ Exemplu de corp pentru validare:
 }
 ```
 
-`area_m2` este calculată geodezic pe elipsoidul WGS84, nu din grade pătrate. Pentru date globale, aproximări grosiere, geometrii foarte complexe sau sisteme de coordonate diferite de lon/lat WGS84 sunt necesare verificări și proiecții GIS dedicate. Sunt acceptate doar Polygon și MultiPolygon; coordonatele trebuie să fie lon/lat valide, iar validarea topologică nu repară geometria.
+`area_m2` este calculată geodezic pe elipsoidul WGS84, nu din grade pătrate. Contractul
+acceptă numai `Polygon` și `MultiPolygon` cu poziții strict 2D `[longitude, latitude]`:
+altitudinea RFC opțională (a treia valoare) este respinsă ca geometrie invalidă.
+Structurile GeoJSON lipsă sau malformate întorc `valid: false`, nu eroare 500.
+Pentru date globale, aproximări grosiere, geometrii foarte complexe sau sisteme de
+coordonate diferite de lon/lat WGS84 sunt necesare verificări și proiecții GIS dedicate.
+Validarea topologică nu repară geometria.
 
 ## Arhitectură și flux de date
 
@@ -81,3 +93,10 @@ pytest -q
 Workflow-ul GitHub Actions din `.github/workflows/ci.yml` instalează proiectul cu extra-urile de dezvoltare și rulează Ruff și pytest la push și pull request.
 
 Interfață asociată: [Farm Registry Web](https://github.com/luciandanileico94-dev/farm-registry-web).
+
+## Notă post-submission — audit fixes
+
+Tag: `final-audit-fixes` (12 august 2026). Această notă documentează corecțiile
+finale pentru CORS și limita strictă 2D GeoJSON. Nu afirmă că un CI de submission
+a fost verde sau reproductibil și nu afirmă efectuarea unui security audit de
+dependențe.

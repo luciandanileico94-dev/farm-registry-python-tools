@@ -1,14 +1,35 @@
 import math
+import os
 from numbers import Real
 from typing import Literal
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from pyproj import Geod
 from shapely.errors import GEOSException
 from shapely.geometry import MultiPolygon, Polygon, shape
 
 app = FastAPI(title="Farm Registry Data Tools", version="1.0.0")
+
+_DEFAULT_CORS_ORIGINS = {
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:4173",
+    "http://localhost:5173",
+    "http://localhost:4173",
+}
+_cors_origins = {
+    origin.strip()
+    for origin in os.getenv("FARM_REGISTRY_CORS_ORIGINS", "").split(",")
+    if origin.strip()
+}
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=sorted(_cors_origins or _DEFAULT_CORS_ORIGINS),
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=["*"],
+)
 
 
 class GeoJSONPayload(BaseModel):
@@ -105,13 +126,15 @@ def _geometry_from_payload(payload: GeoJSONPayload) -> dict | None:
 def _validate_coordinate_ranges(value: object) -> None:
     if not isinstance(value, (list, tuple)):
         raise ValueError("coordinates must be nested arrays")
-    if len(value) >= 2 and all(isinstance(item, Real) for item in value[:2]):
-        longitude, latitude = value[:2]
+    if len(value) == 2 and all(isinstance(item, Real) and not isinstance(item, bool) for item in value):
+        longitude, latitude = value
         if not (math.isfinite(longitude) and math.isfinite(latitude)):
             raise ValueError("coordinates must be finite")
         if not -180 <= longitude <= 180 or not -90 <= latitude <= 90:
             raise ValueError("coordinates must be lon/lat")
         return
+    if any(isinstance(item, Real) for item in value):
+        raise ValueError("only 2D coordinates are supported")
     for child in value:
         _validate_coordinate_ranges(child)
 
@@ -122,18 +145,20 @@ def validate_parcel(payload: GeoJSONPayload) -> ValidationResult:
     geometry = _geometry_from_payload(payload)
     if not geometry or "coordinates" not in geometry:
         return ValidationResult(valid=False, issues=["geometry.coordinates is required"])
+    if not isinstance(geometry.get("type"), str):
+        return ValidationResult(valid=False, issues=["geometry.type must be a string"])
     try:
         _validate_coordinate_ranges(geometry["coordinates"])
         polygon = shape(geometry)
-    except (GEOSException, TypeError, ValueError, KeyError, IndexError):
+        if not isinstance(polygon, (Polygon, MultiPolygon)):
+            return ValidationResult(valid=False, issues=["geometry must be Polygon or MultiPolygon"])
+        if polygon.is_empty:
+            issues.append("geometry is empty")
+        if not polygon.is_valid:
+            issues.append("geometry has a topology issue")
+        area_m2 = 0.0 if polygon.is_empty else _geodesic_area_m2(polygon)
+    except (GEOSException, TypeError, ValueError, KeyError, IndexError, ArithmeticError):
         return ValidationResult(valid=False, issues=["invalid GeoJSON geometry"])
-    if not isinstance(polygon, (Polygon, MultiPolygon)):
-        return ValidationResult(valid=False, issues=["geometry must be Polygon or MultiPolygon"])
-    if polygon.is_empty:
-        issues.append("geometry is empty")
-    if not polygon.is_valid:
-        issues.append("geometry has a topology issue")
-    area_m2 = 0.0 if polygon.is_empty else _geodesic_area_m2(polygon)
     if area_m2 <= 0:
         issues.append("area must be greater than zero")
     return ValidationResult(valid=not issues, area_m2=round(area_m2, 4), issues=issues)
