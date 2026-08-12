@@ -3,13 +3,15 @@ import os
 from numbers import Real
 from typing import Literal
 
-from app.repository import demo_repository, reset_demo_data
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field as PydanticField
+from pydantic import BaseModel
+from pydantic import Field as PydanticField
 from pyproj import Geod
 from shapely.errors import GEOSException
 from shapely.geometry import MultiPolygon, Polygon, shape
+
+from app.repository import demo_repository, reset_demo_data
 
 
 app = FastAPI(
