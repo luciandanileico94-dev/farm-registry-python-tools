@@ -1,6 +1,7 @@
 import json
 
 from fastapi.testclient import TestClient
+from shapely.geometry import shape
 
 from app.main import app
 
@@ -57,7 +58,7 @@ def test_get_parcels_keeps_web_client_contract() -> None:
     response = client.get("/parcels")
     assert response.status_code == 200
     parcels = response.json()
-    expected_keys = {"id", "farmer", "area", "status", "crop", "center"}
+    expected_keys = {"id", "farmer", "area", "status", "crop", "center", "geometry"}
     assert parcels
     for parcel in parcels:
         assert set(parcel) == expected_keys
@@ -74,7 +75,24 @@ def test_get_parcels_keeps_web_client_contract() -> None:
         assert isinstance(longitude, (int, float))
         assert -90 <= latitude <= 90
         assert -180 <= longitude <= 180
+        geometry = parcel["geometry"]
+        assert geometry["type"] == "Polygon"
+        assert shape(geometry).is_valid
+        assert not shape(geometry).is_empty
+        assert geometry["coordinates"][0][0] == geometry["coordinates"][0][-1]
     assert all(parcel["id"].startswith("SYN-") for parcel in parcels)
+
+
+def test_parcel_geometry_is_deterministic_and_matches_center() -> None:
+    first = client.get("/parcels").json()
+    second = client.get("/parcels").json()
+    assert [parcel["geometry"] for parcel in first] == [parcel["geometry"] for parcel in second]
+
+    for parcel in first:
+        latitude, longitude = parcel["center"]
+        centroid = shape(parcel["geometry"]).centroid
+        assert abs(centroid.x - longitude) < 1e-9
+        assert abs(centroid.y - latitude) < 1e-9
 
 
 def test_rejects_missing_geometry() -> None:
