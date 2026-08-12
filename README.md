@@ -12,6 +12,7 @@ uvicorn app.main:app --reload
 ```
 
 - `GET /health`
+- `GET /parcels` — typed demo endpoint consumed by the React web client.
 - `POST /validate/parcel` — принимает GeoJSON Feature и возвращает `valid`, площадь и список topology issues.
 - OpenAPI: `http://127.0.0.1:8000/docs`
 

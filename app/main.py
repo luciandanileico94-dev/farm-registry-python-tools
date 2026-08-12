@@ -15,9 +15,25 @@ class ValidationResult(BaseModel):
     area_m2: float | None = None
     issues: list[str] = Field(default_factory=list)
 
+class Parcel(BaseModel):
+    id: str
+    farmer: str
+    area: float
+    status: Literal["Valid", "Review", "Blocked"]
+    crop: str
+    center: tuple[float, float]
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok", "service": "farm-registry-data-tools"}
+
+@app.get("/parcels", response_model=list[Parcel])
+def parcels() -> list[Parcel]:
+    return [
+        Parcel(id="MD-CT-00142", farmer="AgroNord SRL", area=42.8, status="Valid", crop="Grâu", center=(47.02, 28.84)),
+        Parcel(id="MD-CT-00143", farmer="Ion Balan", area=18.3, status="Review", crop="Porumb", center=(47.04, 28.88)),
+        Parcel(id="MD-CT-00144", farmer="Eco Valea Mare", area=64.1, status="Valid", crop="Floarea-soarelui", center=(46.98, 28.92)),
+    ]
 
 @app.post("/validate/parcel", response_model=ValidationResult)
 def validate_parcel(payload: GeoJSONPayload) -> ValidationResult:
