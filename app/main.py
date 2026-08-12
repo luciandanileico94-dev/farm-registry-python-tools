@@ -42,24 +42,24 @@ def health() -> dict[str, str]:
 def parcels() -> list[Parcel]:
     return [
         Parcel(
-            id="MD-CT-00142",
-            farmer="AgroNord SRL",
+            id="SYN-DEMO-001",
+            farmer="Demo Fermier Exemplu",
             area=42.8,
             status="Valid",
             crop="Grâu",
             center=(47.02, 28.84),
         ),
         Parcel(
-            id="MD-CT-00143",
-            farmer="Ion Balan",
+            id="SYN-DEMO-002",
+            farmer="Exemplu Fermier Demo",
             area=18.3,
             status="Review",
             crop="Porumb",
             center=(47.04, 28.88),
         ),
         Parcel(
-            id="MD-CT-00144",
-            farmer="Eco Valea Mare",
+            id="SYN-DEMO-003",
+            farmer="Demo Exploatație Exemplu",
             area=64.1,
             status="Valid",
             crop="Floarea-soarelui",

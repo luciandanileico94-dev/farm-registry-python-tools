@@ -31,6 +31,11 @@ def test_get_parcels_keeps_web_client_contract() -> None:
     response = client.get("/parcels")
     assert response.status_code == 200
     assert {"id", "farmer", "area", "status", "crop", "center"} <= response.json()[0].keys()
+    assert all(parcel["id"].startswith("SYN-") for parcel in response.json())
+    assert all(
+        "Demo" in parcel["farmer"] or "Exemplu" in parcel["farmer"]
+        for parcel in response.json()
+    )
 
 
 def test_rejects_missing_geometry() -> None:
@@ -65,3 +70,60 @@ def test_accepts_direct_polygon_geojson() -> None:
     assert response.status_code == 200
     assert response.json()["valid"] is True
     assert response.json()["area_m2"] > 7_000
+
+
+def test_rejects_coordinates_outside_lon_lat_ranges() -> None:
+    response = client.post(
+        "/validate/parcel",
+        json={
+            "type": "Polygon",
+            "coordinates": [[[181, 47], [181, 48], [180, 48], [181, 47]]],
+        },
+    )
+    assert response.json() == {
+        "valid": False,
+        "area_m2": None,
+        "issues": ["invalid GeoJSON geometry"],
+    }
+
+
+def test_rejects_non_finite_coordinates() -> None:
+    response = client.post(
+        "/validate/parcel",
+        json={
+            "type": "Polygon",
+            "coordinates": [[[0, 0], [1, float("inf")], [1, 1], [0, 0]]],
+        },
+    )
+    assert response.json()["valid"] is False
+    assert response.json()["issues"] == ["invalid GeoJSON geometry"]
+
+
+def test_subtracts_polygon_holes_from_geodesic_area() -> None:
+    response = client.post(
+        "/validate/parcel",
+        json={
+            "type": "Polygon",
+            "coordinates": [
+                [[0, 0], [2, 0], [2, 2], [0, 2], [0, 0]],
+                [[0.5, 0.5], [1.5, 0.5], [1.5, 1.5], [0.5, 1.5], [0.5, 0.5]],
+            ],
+        },
+    )
+    assert response.json()["valid"] is True
+    assert response.json()["area_m2"] < 40_000_000_000
+
+
+def test_sums_multipolygon_parts() -> None:
+    response = client.post(
+        "/validate/parcel",
+        json={
+            "type": "MultiPolygon",
+            "coordinates": [
+                [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]],
+                [[[2, 0], [3, 0], [3, 1], [2, 1], [2, 0]]],
+            ],
+        },
+    )
+    assert response.json()["valid"] is True
+    assert response.json()["area_m2"] > 24_000_000_000
