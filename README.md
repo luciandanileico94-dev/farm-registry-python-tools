@@ -16,8 +16,8 @@ Demo-ul public este găzduit pe Render:
 - [Health check](https://farm-registry-api-demo.onrender.com/health)
 - [Documentație interactivă OpenAPI](https://farm-registry-api-demo.onrender.com/docs)
 
-Instanța live este numai pentru demonstrație. Datele create sau resetate pot
-dispărea la restart, redeploy ori înlocuirea procesului.
+Instanța live este numai pentru demonstrație. Starea este temporară: datele
+create sau resetate pot dispărea la restart, redeploy ori înlocuirea procesului.
 
 ## Endpoint-uri
 
