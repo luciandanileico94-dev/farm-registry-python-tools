@@ -47,6 +47,11 @@ FastAPI publică interfața Swagger UI la `GET /docs` și schema OpenAPI la
 `GET /openapi.json`. Cererile cu resurse necunoscute primesc răspunsuri `404`,
 iar payload-urile care nu respectă modelele primesc `422`.
 
+## Evidence
+
+- [Arhitectura runtime](docs/architecture.md)
+- [Matricea endpoint-urilor și a dovezilor](docs/evidence-matrix.md)
+
 ## Dezvoltare locală
 
 Este necesar Python 3.11 sau mai nou.
