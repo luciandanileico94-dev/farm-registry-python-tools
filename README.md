@@ -42,7 +42,10 @@ Capturile sunt din documentația OpenAPI generată automat pentru API-ul curent,
 ## API
 
 - `GET /health` — verificare simplă a serviciului.
-- `GET /parcels` — listă de parcele demo, cu schema păstrată pentru clientul Farm Registry Web.
+- `GET /parcels` — listă de parcele demo, cu schema păstrată pentru clientul Farm Registry Web;
+  fiecare parcelă include `geometry`, un GeoJSON `Polygon` fix și valid, în coordonate
+  `[longitude, latitude]`, consistent cu `center` (`[latitude, longitude]`). Clientul web
+  poate afișa astfel conturul primit de la API, fără să-l sintetizeze din centru.
 - `POST /validate/parcel` — primește un GeoJSON `Feature` cu geometrie `Polygon`/`MultiPolygon` sau un GeoJSON direct și întoarce `valid`, `area_m2` și problemele de topologie.
 
 Exemplu de corp pentru validare:
@@ -70,7 +73,10 @@ Validarea topologică nu repară geometria.
 
 `app/main.py` definește aplicația, modelele Pydantic și cele trei endpoint-uri. Pentru `/validate/parcel`, requestul este modelat ca `GeoJSONPayload`, geometria este extrasă din Feature sau din GeoJSON direct, coordonatele sunt verificate ca lon/lat finite, apoi Shapely construiește și verifică Polygon/MultiPolygon. Pentru geometriile acceptate, pyproj calculează aria WGS84: aria găurilor este scăzută, iar ariile componentelor unui MultiPolygon sunt adunate. Response-ul este `ValidationResult`.
 
-`GET /parcels` construiește în memorie trei obiecte `Parcel` cu identificatori `SYN-` și nume `Demo`/`Exemplu`; nu există citire dintr-o bază de date în acest serviciu. Schema response-ului este verificată de FastAPI prin `response_model=list[Parcel]`.
+`GET /parcels` construiește în memorie trei obiecte `Parcel` cu identificatori `SYN-`, nume
+`Demo`/`Exemplu` și contururi GeoJSON fixe; geometria este verificată ca Polygon valid și
+nevid prin Shapely. Nu există citire dintr-o bază de date în acest serviciu. Schema
+response-ului este verificată de FastAPI prin `response_model=list[Parcel]`.
 
 ## Dovezi criteriu → fișier/test
 

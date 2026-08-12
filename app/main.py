@@ -5,7 +5,7 @@ from typing import Literal
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from pyproj import Geod
 from shapely.errors import GEOSException
 from shapely.geometry import MultiPolygon, Polygon, shape
@@ -45,6 +45,18 @@ class ValidationResult(BaseModel):
     issues: list[str] = Field(default_factory=list)
 
 
+class ParcelGeometry(BaseModel):
+    type: Literal["Polygon"]
+    coordinates: list[list[tuple[float, float]]]
+
+    @model_validator(mode="after")
+    def validate_polygon(self) -> "ParcelGeometry":
+        polygon = shape(self.model_dump())
+        if not isinstance(polygon, Polygon) or polygon.is_empty or not polygon.is_valid:
+            raise ValueError("parcel geometry must be a valid, non-empty Polygon")
+        return self
+
+
 class Parcel(BaseModel):
     id: str
     farmer: str
@@ -52,6 +64,7 @@ class Parcel(BaseModel):
     status: Literal["Valid", "Review", "Blocked"]
     crop: str
     center: tuple[float, float]
+    geometry: ParcelGeometry
 
 
 @app.get("/health")
@@ -69,6 +82,18 @@ def parcels() -> list[Parcel]:
             status="Valid",
             crop="Grâu",
             center=(47.02, 28.84),
+            geometry={
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        [28.835, 47.015],
+                        [28.845, 47.015],
+                        [28.845, 47.025],
+                        [28.835, 47.025],
+                        [28.835, 47.015],
+                    ]
+                ],
+            },
         ),
         Parcel(
             id="SYN-DEMO-002",
@@ -77,6 +102,18 @@ def parcels() -> list[Parcel]:
             status="Review",
             crop="Porumb",
             center=(47.04, 28.88),
+            geometry={
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        [28.874, 47.034],
+                        [28.886, 47.034],
+                        [28.886, 47.046],
+                        [28.874, 47.046],
+                        [28.874, 47.034],
+                    ]
+                ],
+            },
         ),
         Parcel(
             id="SYN-DEMO-003",
@@ -85,6 +122,18 @@ def parcels() -> list[Parcel]:
             status="Valid",
             crop="Floarea-soarelui",
             center=(46.98, 28.92),
+            geometry={
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        [28.912, 46.972],
+                        [28.928, 46.972],
+                        [28.928, 46.988],
+                        [28.912, 46.988],
+                        [28.912, 46.972],
+                    ]
+                ],
+            },
         ),
     ]
 
