@@ -26,6 +26,13 @@ uvicorn app.main:app --reload
 
 API-ul este disponibil la `http://127.0.0.1:8000`, iar documentația OpenAPI la `/docs`.
 
+## Capturi reale ale API-ului
+
+Capturile sunt din documentația OpenAPI generată automat pentru API-ul curent, accesibilă local la `/docs` după pornirea serverului. Nu este un backend public deployed și nu există un live URL:
+
+- [Desktop](docs/screenshots/openapi-desktop.png)
+- [Mobil](docs/screenshots/openapi-mobile.png)
+
 ## API
 
 - `GET /health` — verificare simplă a serviciului.
