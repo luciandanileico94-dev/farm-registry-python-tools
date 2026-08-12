@@ -41,7 +41,8 @@ nu folosește wildcard și credentials sunt dezactivate.
 ## Endpoint-uri
 
 - `GET /health` — starea serviciului.
-- `GET /parcels` — contractul legacy pentru Web: `id`, `farmer`, `area`, `status`, `crop`, `center`.
+- `GET /parcels` — contractul pentru Web: `id`, `farmer`, `area`, `status`,
+  `crop`, `center` și un contur GeoJSON `geometry` valid.
 - `POST /validate/parcel` — validează GeoJSON `Polygon`/`MultiPolygon`, cu aria geodezică WGS84.
 - `GET /farms` și `GET /farms/{farm_id}` — ferme și câmpurile unei ferme.
 - `GET /fields` — filtre opționale `farm_id`, `status`, `crop`.
@@ -58,6 +59,29 @@ necunoscute sunt răspunsuri controlate `404`, iar cererile cu schema invalidă
 primesc `422`. Contractul de geometrie acceptă numai poziții 2D
 `[longitude, latitude]`; structurile GeoJSON malformate întorc `valid: false`,
 nu eroare 500.
+
+Geometria fiecărei parcele din `GET /parcels` este un `Polygon` fix și valid,
+generat determinist din coordonatele sintetice ale câmpului. Conturul folosește
+ordinea GeoJSON `[longitude, latitude]`, este centrat pe valoarea `center`
+(`[latitude, longitude]`) și poate fi afișat direct de clientul Web.
+
+Exemplu de corp pentru validare:
+
+```json
+{
+  "type": "Feature",
+  "properties": {},
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [[[28, 47], [28.001, 47], [28.001, 47.001], [28, 47.001], [28, 47]]]
+  }
+}
+```
+
+`area_m2` este calculată geodezic pe elipsoidul WGS84, nu din grade pătrate.
+Găurile sunt scăzute, iar componentele unui `MultiPolygon` sunt însumate.
+Validarea topologică nu repară geometria; pentru geometrii complexe ori alte
+sisteme de coordonate sunt necesare verificări GIS dedicate.
 
 ## Testare și verificare
 

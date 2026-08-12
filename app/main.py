@@ -5,7 +5,7 @@ from typing import Literal
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 from pydantic import Field as PydanticField
 from pyproj import Geod
 from shapely.errors import GEOSException
@@ -66,6 +66,18 @@ class ValidationResult(BaseModel):
     issues: list[str] = PydanticField(default_factory=list)
 
 
+class ParcelGeometry(BaseModel):
+    type: Literal["Polygon"]
+    coordinates: list[list[tuple[float, float]]]
+
+    @model_validator(mode="after")
+    def validate_polygon(self) -> "ParcelGeometry":
+        polygon = shape(self.model_dump())
+        if not isinstance(polygon, Polygon) or polygon.is_empty or not polygon.is_valid:
+            raise ValueError("parcel geometry must be a valid, non-empty Polygon")
+        return self
+
+
 class Parcel(BaseModel):
     """Contract păstrat pentru clientul Farm Registry Web existent."""
 
@@ -75,6 +87,7 @@ class Parcel(BaseModel):
     status: Literal["Valid", "Review", "Blocked"]
     crop: str
     center: tuple[float, float]
+    geometry: ParcelGeometry
 
 
 class Farm(BaseModel):
@@ -181,6 +194,23 @@ def _observation_response(row: dict) -> Observation:
     return Observation(**row)
 
 
+def _parcel_geometry(latitude: float, longitude: float) -> ParcelGeometry:
+    """Build a deterministic demo contour centered on a field's stored point."""
+    offset = 0.005
+    return ParcelGeometry(
+        type="Polygon",
+        coordinates=[
+            [
+                (longitude - offset, latitude - offset),
+                (longitude + offset, latitude - offset),
+                (longitude + offset, latitude + offset),
+                (longitude - offset, latitude + offset),
+                (longitude - offset, latitude - offset),
+            ]
+        ],
+    )
+
+
 @app.get("/health", tags=["Sănătate"], summary="Verifică sănătatea serviciului")
 def health() -> dict[str, str]:
     return {"status": "ok", "service": "farm-registry-data-tools"}
@@ -204,6 +234,7 @@ def parcels() -> list[Parcel]:
                 status=field["status"],
                 crop=field["crop"],
                 center=(field["center_lat"], field["center_lon"]),
+                geometry=_parcel_geometry(field["center_lat"], field["center_lon"]),
             )
         )
     return result
