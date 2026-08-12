@@ -150,7 +150,11 @@ def test_rejects_three_dimensional_coordinates() -> None:
         },
     )
     assert response.status_code == 200
-    assert response.json() == {"valid": False, "area_m2": None, "issues": ["invalid GeoJSON geometry"]}
+    assert response.json() == {
+        "valid": False,
+        "area_m2": None,
+        "issues": ["invalid GeoJSON geometry"],
+    }
 
 
 def test_rejects_feature_with_missing_geometry_type() -> None:

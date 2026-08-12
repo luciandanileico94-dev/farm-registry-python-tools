@@ -126,7 +126,9 @@ def _geometry_from_payload(payload: GeoJSONPayload) -> dict | None:
 def _validate_coordinate_ranges(value: object) -> None:
     if not isinstance(value, (list, tuple)):
         raise ValueError("coordinates must be nested arrays")
-    if len(value) == 2 and all(isinstance(item, Real) and not isinstance(item, bool) for item in value):
+    if len(value) == 2 and all(
+        isinstance(item, Real) and not isinstance(item, bool) for item in value
+    ):
         longitude, latitude = value
         if not (math.isfinite(longitude) and math.isfinite(latitude)):
             raise ValueError("coordinates must be finite")
@@ -151,7 +153,9 @@ def validate_parcel(payload: GeoJSONPayload) -> ValidationResult:
         _validate_coordinate_ranges(geometry["coordinates"])
         polygon = shape(geometry)
         if not isinstance(polygon, (Polygon, MultiPolygon)):
-            return ValidationResult(valid=False, issues=["geometry must be Polygon or MultiPolygon"])
+            return ValidationResult(
+                valid=False, issues=["geometry must be Polygon or MultiPolygon"]
+            )
         if polygon.is_empty:
             issues.append("geometry is empty")
         if not polygon.is_valid:
