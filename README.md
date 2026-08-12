@@ -49,8 +49,7 @@ iar payload-urile care nu respectă modelele primesc `422`.
 
 ## Evidence
 
-- [Arhitectura runtime](docs/architecture.md)
-- [Matricea endpoint-urilor și a dovezilor](docs/evidence-matrix.md)
+Consultă [arhitectura runtime](docs/architecture.md) și [matricea de evidence](docs/evidence-matrix.md).
 
 ## Dezvoltare locală
 

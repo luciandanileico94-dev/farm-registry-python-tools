@@ -1,6 +1,6 @@
-# Arhitectura runtime
+# Arhitectura runtime și granițe de demo
 
-Acest document descrie implementarea care rulează în repository, nu o arhitectură
+Acest document descrie implementarea verificabilă din repository, nu o arhitectură
 de producție propusă. API-ul deservește exclusiv un demo cu date sintetice.
 
 ## Fluxul unei cereri
@@ -13,7 +13,7 @@ flowchart LR
         U[Uvicorn<br/>app.main:app] --> R[FastAPI routes<br/>și modele Pydantic]
         R -->|ferme, câmpuri,<br/>sarcini, observații, evenimente| D[DemoRepository]
         D --> S[(SQLite :memory:<br/>per proces)]
-        R -->|POST /validate/parcel| G[Helper-e GeoJSON<br/>Shapely + pyproj.Geod WGS84]
+        R -->|POST /validate/parcel| G[Helper-e GeoJSON din app/main.py<br/>Shapely + pyproj.Geod WGS84]
         R -->|POST /demo/reset| X[reset_demo_data]
         X --> D
         D -->|reset la pornire<br/>și seed determinist| S
@@ -40,11 +40,12 @@ intervalele longitudine/latitudine. Shapely construiește și validează topolog
 `pyproj.Geod(ellps="WGS84")` calculează aria geodezică; găurile sunt scăzute și părțile
 unui `MultiPolygon` sunt însumate.
 
-În starea auditată, ruta și helper-ele `_geometry_from_payload`,
+În arborele auditat, ruta și helper-ele `_geometry_from_payload`,
 `_validate_coordinate_ranges`, `_polygon_area_m2` și `_geodesic_area_m2` sunt toate în
-[`app/main.py`](../app/main.py). Un modul `app/geo.py` nu există în arborele curent, deci
-nu este prezentat ca evidence path. Separarea într-un asemenea modul ar fi o schimbare
-de cod, în afara acestei actualizări docs-only.
+[`app/main.py`](../app/main.py). Fișierul `app/geo.py` nu există în această
+revizie. Prin urmare, nu este corect ca ruta să fie atribuită acelui modul; extragerea
+helper-elor într-un astfel de fișier ar fi o schimbare de cod, în afara actualizării
+docs-only.
 
 ## Seed și reset
 
