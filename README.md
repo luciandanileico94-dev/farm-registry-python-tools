@@ -73,12 +73,20 @@ sunt referințe locale; nu indică un URL live.
 
 ## Așteptări pentru Render
 
-Aplicația poate fi pornită într-un serviciu Render cu un command Uvicorn, de
-exemplu `uvicorn app.main:app --host 0.0.0.0 --port $PORT`. Aceasta este doar o
-instrucțiune de rulare: repository-ul nu configurează deployment, nu publică
-un API și nu afirmă existența unui serviciu Render activ. Datele SQLite în
-memorie se resetează la repornirea procesului, ceea ce este potrivit pentru
-demo, nu pentru persistență de producție.
+Repository-ul include un blueprint Render minimal în `render.yaml`. Pentru a
+folosi configurația, proprietarul repository-ului trebuie să-l lege de Render
+și să execute comanda blueprint din dashboard Render (New → Blueprint), alegând
+repository-ul și confirmând serviciul `farm-registry-api-demo`. Render va
+interpreta fișierul și va crea așteptatul serviciu web Python gratuit, cu
+`pip install .`, Uvicorn și verificarea de sănătate `/health`.
+
+Legarea repository-ului în Render și confirmarea blueprint-ului trebuie făcute
+de proprietar; acest repository nu poate face acești pași în locul lui. Nu
+pretindem că serviciul este deployed, nu includem un URL real și nu adăugăm
+secrete. Valoarea `FARM_REGISTRY_CORS_ORIGINS` trebuie introdusă în Render
+proprietarului (câmpul este sincronizat manual), iar `PYTHON_VERSION` este
+`3.12`. Datele SQLite în memorie se resetează la repornirea procesului, ceea ce
+este potrivit pentru demo, nu pentru persistență de producție.
 
 ## Arhitectură
 
