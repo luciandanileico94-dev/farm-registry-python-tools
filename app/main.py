@@ -13,7 +13,6 @@ from shapely.geometry import MultiPolygon, Polygon, shape
 
 from app.repository import demo_repository, reset_demo_data
 
-
 app = FastAPI(
     title="Registrul Fermelor — API demo sintetic",
     version="1.1.0",
