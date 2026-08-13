@@ -1,8 +1,8 @@
-# Matrice de evidence
+# Matrice de evidence verificabilă
 
 Matricea leagă fiecare afirmație de implementarea auditată și de o comandă care poate
 fi rulată din rădăcina repository-ului. Comenzile `pytest` indică numai teste care există
-în arborele curent.
+în arborele curent; ele nu pretind că teste inexistente sau servicii externe sunt evidence.
 
 ## Endpoint-uri și limite runtime
 
@@ -19,12 +19,12 @@ fi rulată din rădăcina repository-ului. Comenzile `pytest` indică numai test
 | `GET` | `/observations` | [`app/main.py`](../app/main.py): `observations`; [`app/repository.py`](../app/repository.py): `DemoRepository.observations` | `pytest -q tests/test_registry.py::test_field_and_task_filters` | Filtre exacte pe `field_id` și `status`; date volatile. |
 | `POST` | `/observations` | [`app/main.py`](../app/main.py): `ObservationCreate`, `create_observation`; [`app/repository.py`](../app/repository.py): `DemoRepository.create_observation` | `pytest -q tests/test_registry.py::test_observation_is_idempotent_by_client_action_id` | Idempotent numai după `client_action_id` în baza procesului; fără sincronizare durabilă. |
 | `GET` | `/sync/events` | [`app/main.py`](../app/main.py): `sync_events`; [`app/repository.py`](../app/repository.py): `DemoRepository.events` | `pytest -q tests/test_registry.py::test_seed_counts_and_synthetic_ids` | Jurnal sintetic în memorie, nu event store sau audit durabil. |
-| `POST` | `/validate/parcel` | [`app/main.py`](../app/main.py): `GeoJSONPayload`, `validate_parcel`, `_geodesic_area_m2` | `pytest -q tests/test_main.py -k 'geojson or polygon or multipolygon or coordinate'` | Validare locală `Polygon`/`MultiPolygon`; aria este geodezică WGS84, fără cadastru/GPS real. |
+| `POST` | `/validate/parcel` | [`app/main.py`](../app/main.py): `GeoJSONPayload`, `validate_parcel`, `_geometry_from_payload`, `_geodesic_area_m2` | `pytest -q tests/test_main.py -k 'geojson or polygon or multipolygon or coordinate'` | Validare locală `Polygon`/`MultiPolygon`; aria este geodezică WGS84, fără cadastru/GPS real. |
 | `POST` | `/demo/reset` | [`app/main.py`](../app/main.py): `reset_demo`; [`app/repository.py`](../app/repository.py): `reset_demo_data`, `DemoRepository.reset` | `pytest -q tests/test_registry.py::test_reset_restores_deterministic_counts` | Resetează numai procesul curent și elimină scrierile demo din acel proces. |
 | `OPTIONS` | `*` (CORS preflight) | [`app/main.py`](../app/main.py): `_DEFAULT_CORS_ORIGINS`, `_configured_origins`, `CORSMiddleware` | `pytest -q tests/test_main.py -k cors` | Origini explicite și metode `GET`, `POST`, `OPTIONS`; wildcard-ul configurat este ignorat. |
 | `Runtime` | `DemoRepository` | [`app/repository.py`](../app/repository.py): `DemoRepository.__init__`, `sqlite3.connect(":memory:")`, `Lock` | `pytest -q tests/test_registry.py` | SQLite per proces și lock in-process; fără persistență sau coordonare multi-proces. |
 | `Runtime` | `seed/reset` | [`app/repository.py`](../app/repository.py): `DemoRepository.reset`, `_seed_farms`, `_seed_fields`, `_seed_tasks`, `_seed_observations`, `_seed_events` | `pytest -q tests/test_registry.py::test_seed_counts_and_synthetic_ids tests/test_registry.py::test_reset_restores_deterministic_counts` | Fixture-uri deterministe, exclusiv sintetice. |
-| `Runtime` | `GeoJSON` | [`app/main.py`](../app/main.py): `GEOD`, `_validate_coordinate_ranges`, `_polygon_area_m2`, `_geodesic_area_m2` | `pytest -q tests/test_main.py -k 'geojson or polygon or multipolygon or coordinate'` | Implementarea este în `app/main.py`; nu există `app/geo.py` în versiunea auditată. |
+| `Runtime` | `GeoJSON` | [`app/main.py`](../app/main.py): `GEOD`, `_validate_coordinate_ranges`, `_polygon_area_m2`, `_geodesic_area_m2` | `pytest -q tests/test_main.py -k 'geojson or polygon or multipolygon or coordinate'` | Implementarea este în `app/main.py`; `app/geo.py` nu există în versiunea auditată, deci nu poate fi evidence path. |
 | `Deploy` | `render.yaml` | [`render.yaml`](../render.yaml): `farm-registry-api-demo`, `startCommand`, `healthCheckPath`, `PYTHON_VERSION` | `python -c 'from pathlib import Path; s=Path("render.yaml").read_text(); assert all(x in s for x in ("farm-registry-api-demo", "uvicorn app.main:app", "healthCheckPath: /health", "value: \"3.12\""))'` | Render pornește demo-ul public; configurația nu adaugă persistență, auth sau integrări reale. |
 
 ## Căi de verificare la nivel de repository
